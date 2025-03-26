@@ -97,7 +97,8 @@ if uploaded_file:
 
     features_fit = pd.concat([numeric_scaled_fit, cultural_encoded, lifestyle_encoded], axis=1)
 
-    kmeans = KMeans(n_clusters=5, random_state=42)
+    n_clusters = min(5, len(features_fit))  # Prevent requesting more clusters than rows
+    kmeans = KMeans(n_clusters=n_clusters, random_state=42)
     cluster_labels = kmeans.fit_predict(features_fit)
     df['Fit Cluster'] = cluster_labels
     centroids = kmeans.cluster_centers_
