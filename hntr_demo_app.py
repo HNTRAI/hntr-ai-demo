@@ -20,43 +20,43 @@ def load_csv_data(file):
     df.columns = df.columns.str.strip().str.lower()
     return df
 
-def validate_data(df, required_columns=["name", "aum", "tenure", "gdc"]):
+def validate_data(df, required_columns=["name", "aum", "tenure", "gdc", "fee_based", "commission"]):
     # Ensure that the DataFrame contains all required columns
     st.write("Loaded CSV Columns:", df.columns)  # Debugging the columns
     df.columns = df.columns.str.strip()  # Strip spaces from column names
 
     missing_columns = [col for col in required_columns if col not in df.columns]
     if missing_columns:
-        st.error(f"Missing required columns: {', '.join(missing_columns)}. Please verify your CSV file.")
-        return False
+        st.warning(f"Missing required columns: {', '.join(missing_columns)}. Default values will be assigned.")
+        for col in missing_columns:
+            # Add missing columns with default values (0 for numeric columns)
+            if col in ['blix_score', 'fit_score', 'priority_score', 'cluster']:
+                df[col] = 0
+            else:
+                df[col] = 0  # Default value for missing columns (adjust logic as necessary)
     return True
 
 def calculate_blix_score(df):
     # Calculate the BLIX Score based on provided advisor data
     st.write("Columns in the DataFrame: ", df.columns)  # Debugging the columns
-    
-    # Check if 'competitor_site_visits' exists in the DataFrame
+
+    # Set default values for any missing columns
     if 'competitor_site_visits' not in df.columns:
         st.warning("'competitor_site_visits' column is missing. BLIX score will be calculated without it.")
-        # Set competitor_site_visits to 0 for missing data
-        df['competitor_site_visits'] = 0
-        df['blix_score'] = (
-            (df['tenure'] ** 0.5) * 0.2 + 
-            np.log(df['aum'] + 1) * 0.3 + 
-            (df['gdc'] / df['gdc'].max()) * 0.3 + 
-            (df['competitor_site_visits'] * 0.1) + 
-            (df['event_attendance'] * 0.1)
-        )
-    else:
-        # Calculate BLIX score with competitor site visits
-        df['blix_score'] = (
-            (df['tenure'] ** 0.5) * 0.2 + 
-            np.log(df['aum'] + 1) * 0.3 + 
-            (df['gdc'] / df['gdc'].max()) * 0.3 + 
-            (df['competitor_site_visits'] * 0.1) + 
-            (df['event_attendance'] * 0.1)
-        )
-    
+        df['competitor_site_visits'] = 0  # Default value for missing column
+
+    if 'event_attendance' not in df.columns:
+        st.warning("'event_attendance' column is missing. BLIX score will be calculated with default values.")
+        df['event_attendance'] = 0  # Default value for missing column
+
+    # Calculate the BLIX score
+    df['blix_score'] = (
+        (df['tenure'] ** 0.5) * 0.2 + 
+        np.log(df['aum'] + 1) * 0.3 + 
+        (df['gdc'] / df['gdc'].max()) * 0.3 + 
+        (df['competitor_site_visits'] * 0.1) + 
+        (df['event_attendance'] * 0.1)
+    )
     df['blix_score'] = df['blix_score'].clip(0, 100)  # Ensure the score is between 0 and 100
     return df
 
