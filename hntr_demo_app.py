@@ -18,6 +18,9 @@ def load_csv_data(file):
 
 def validate_data(df, required_columns=['Name', 'BLIX Score', 'Fit Score']):
     # Ensure that the DataFrame contains all required columns.
+    st.write("Loaded CSV Columns:", df.columns)  # Debugging the columns
+    df.columns = df.columns.str.strip()  # Strip spaces from column names
+
     missing_columns = [col for col in required_columns if col not in df.columns]
     if missing_columns:
         st.error(f"Missing required columns: {', '.join(missing_columns)}. Please verify your CSV file.")
@@ -41,7 +44,7 @@ def display_reports(df):
     # Display various reports from the processed DataFrame.
     st.write("### Processed Advisor Data")
     st.dataframe(df)
-
+    
     # BLIX vs Fit scatter plot
     st.write("### BLIX Score vs. Fit Score")
     fig, ax = plt.subplots()
