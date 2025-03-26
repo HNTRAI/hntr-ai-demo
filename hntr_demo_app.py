@@ -1,163 +1,72 @@
-# HNTR AI Demo App - Streamlit Integration for HNTR Fit + BLIX
 
 import streamlit as st
 import pandas as pd
 import numpy as np
-from datetime import datetime
-from sklearn.preprocessing import MinMaxScaler, MultiLabelBinarizer
-from sklearn.linear_model import LogisticRegression
+from sklearn.preprocessing import MinMaxScaler
 from sklearn.cluster import KMeans
-from sklearn.metrics.pairwise import cosine_similarity
 import matplotlib.pyplot as plt
 
-# Page configuration
-st.set_page_config(page_title="HNTR AI Demo", layout="wide")
-st.title("🔍 HNTR AI – Advisor Intelligence Demo")
+# Cache the CSV loading function for performance benefits
+@st.cache_data
+def load_csv_data(file):
+    try:
+        df = pd.read_csv(file)
+        return df
+    except Exception as e:
+        st.error(f"Error loading CSV file: {e}")
+        return None
 
-st.sidebar.title("HNTR AI")
-st.sidebar.markdown(
-    """
-    This app demonstrates the dual scoring engine behind HNTR AI:
+def validate_data(df, required_columns=['Name', 'BLIX Score', 'Fit Score']):
+    # Ensure that the DataFrame contains all required columns.
+    missing_columns = [col for col in required_columns if col not in df.columns]
+    if missing_columns:
+        st.error(f"Missing required columns: {', '.join(missing_columns)}. Please verify your CSV file.")
+        return False
+    return True
 
-    - 🔥 **BLIX™** – Breakaway Likelihood Index  
-    - 🧬 **HNTR Fit** – Cultural & Performance Compatibility
+def process_data(df):
+    # Process the data: handle missing values and compute any additional scores.
+    df.fillna({'BLIX Score': 0, 'Fit Score': 0}, inplace=True)  # Fill missing values with 0
+    scaler = MinMaxScaler()
+    df[['BLIX Score', 'Fit Score']] = scaler.fit_transform(df[['BLIX Score', 'Fit Score']])
+    return df
 
-    Upload your advisor dataset to get real-time scores.
-    """)
+def clustering(df):
+    # Apply KMeans clustering to group advisors by Fit and BLIX scores.
+    kmeans = KMeans(n_clusters=3, random_state=42)
+    df['Cluster'] = kmeans.fit_predict(df[['BLIX Score', 'Fit Score']])
+    return df, kmeans
 
-# Upload data
-uploaded_file = st.file_uploader("📂 Upload Advisor Dataset (CSV)", type="csv", help="Include BLIX and Fit-related fields.")
+def display_reports(df):
+    # Display various reports from the processed DataFrame.
+    st.write("### Processed Advisor Data")
+    st.dataframe(df)
 
-if uploaded_file:
-    df = pd.read_csv(uploaded_file)
-
-# Ensure the 'Name' column exists after loading the CSV
-if 'Name' not in df.columns:
-    st.error("❌ Missing 'Name' column in uploaded data. Please upload a file with this column.")
-    st.stop()  # Stops further execution
-    st.subheader("🗂 Uploaded Data Preview")
-    st.dataframe(df.head())
-
-    st.subheader("🔥 BLIX Score Calculation (Breakaway Risk)")
-    current_date = datetime.now()
-
-    def compute_time_decay(last_activity_date, current_date, decay_constant=30):
-        days_since = (current_date - pd.to_datetime(last_activity_date)).days
-        return np.exp(-days_since / decay_constant)
-
-    def risk_band(score):
-        if score >= 70:
-            return "🔥 Hot"
-        elif score >= 50:
-            return "⚠️ Warm"
-        else:
-            return "❄️ Cold"
-
-    df['CRM_decay'] = df['Last CRM activity date'].apply(lambda x: compute_time_decay(x, current_date))
-    linkedin_map = {'low': 0, 'med': 0.5, 'high': 1}
-    df['LinkedIn_activity'] = df['Recent LinkedIn activity'].map(linkedin_map)
-
-    numeric_cols_blix = ['CRM_decay', 'Competitor site visits', 'Advisor tenure', 'AUM change %']
-    scaler_blix = MinMaxScaler()
-    scaled_blix = scaler_blix.fit_transform(df[numeric_cols_blix])
-    scaled_df_blix = pd.DataFrame(scaled_blix, columns=[col + '_scaled' for col in numeric_cols_blix])
-
-    features_blix = pd.concat([
-        scaled_df_blix,
-        df[['LinkedIn_activity', 'Digital engagement score',
-            'Event attendance', 'Compensation plan change', 'Legal trigger']]
-    ], axis=1)
-
-    model_blix = LogisticRegression()
-
-    # Only train model if there's enough data
-    if features_blix.shape[0] > 1:
-        dummy_y = np.random.randint(0, 2, size=features_blix.shape[0])
-        model_blix.fit(features_blix, dummy_y)
-        blix_scores = model_blix.predict_proba(features_blix)[:, 1] * 100
-        df['BLIX Score'] = blix_scores
-        df['Risk Band'] = df['BLIX Score'].apply(risk_band)
-    else:
-        st.error("❌ Not enough data rows to train the BLIX model. Please upload a CSV with at least 2 rows.")
-        st.stop()
-
-    st.markdown("#### 📊 Risk Bands")
-
-required_columns = ['Name', 'BLIX Score', 'Risk Band']
-missing_columns = [col for col in required_columns if col not in df.columns]
-if missing_columns:
-    st.error(f"❌ Missing columns: {', '.join(missing_columns)}.")
-else:
-    st.dataframe(df[required_columns])
-
-
-    st.markdown("#### 📈 BLIX Score Distribution")
+    # BLIX vs Fit scatter plot
+    st.write("### BLIX Score vs. Fit Score")
     fig, ax = plt.subplots()
-    ax.hist(df['BLIX Score'], bins=10, edgecolor='black')
-    ax.set_title("BLIX Score Distribution")
-    ax.set_xlabel("Score")
-    ax.set_ylabel("Frequency")
+    ax.scatter(df['BLIX Score'], df['Fit Score'], c=df['Cluster'], cmap='viridis')
+    ax.set_xlabel('BLIX Score')
+    ax.set_ylabel('Fit Score')
     st.pyplot(fig)
 
-    st.markdown("---")
-    st.subheader("🧬 HNTR Fit Score Calculation (Advisor Compatibility)")
+def main():
+    st.title("Advisor Intelligence App")
+    st.markdown("Upload your advisor CSV data to see BLIX and Fit Score reports.")
+    
+    file = st.file_uploader("Upload CSV file", type=["csv"])
+    if file is not None:
+        df = load_csv_data(file)
+        if df is not None:
+            if validate_data(df):
+                df = process_data(df)
+                df, kmeans = clustering(df)
+                st.success("Data loaded, processed, and clustered successfully!")
+                display_reports(df)
+            else:
+                st.error("Data validation failed. Please correct the issues in your CSV file.")
+        else:
+            st.error("Failed to load data. Please try again with a valid CSV file.")
 
-    numeric_cols_fit = ['GDC', 'AUM', 'tenure', 'fee_based', 'commission']
-    df[numeric_cols_fit] = df[numeric_cols_fit].apply(pd.to_numeric, errors='coerce')
-    df[numeric_cols_fit] = df[numeric_cols_fit].fillna(df[numeric_cols_fit].median())
-
-    scaler_fit = MinMaxScaler()
-    numeric_scaled_fit = pd.DataFrame(scaler_fit.fit_transform(df[numeric_cols_fit]), columns=numeric_cols_fit)
-
-    for col in ['cultural_tags', 'lifestyle_attributes']:
-        df[col] = df[col].fillna('').apply(lambda x: [tag.strip() for tag in x.split(',') if tag.strip()])
-
-    mlb_cultural = MultiLabelBinarizer()
-    cultural_encoded = pd.DataFrame(mlb_cultural.fit_transform(df['cultural_tags']),
-                                    columns=[f"cultural_{tag}" for tag in mlb_cultural.classes_])
-
-    mlb_lifestyle = MultiLabelBinarizer()
-    lifestyle_encoded = pd.DataFrame(mlb_lifestyle.fit_transform(df['lifestyle_attributes']),
-                                     columns=[f"lifestyle_{tag}" for tag in mlb_lifestyle.classes_])
-
-    features_fit = pd.concat([numeric_scaled_fit, cultural_encoded, lifestyle_encoded], axis=1)
-
-    n_clusters = min(5, len(features_fit))
-    kmeans = KMeans(n_clusters=n_clusters, random_state=42)
-    cluster_labels = kmeans.fit_predict(features_fit)
-    df['Fit Cluster'] = cluster_labels
-    centroids = kmeans.cluster_centers_
-    similarities = cosine_similarity(features_fit, centroids)
-    fit_scores = similarities.max(axis=1) * 100
-    df['Fit Score'] = fit_scores
-
-
-required_columns = ['Name', 'Fit Score', 'Fit Cluster']
-missing_columns = [col for col in required_columns if col not in df.columns]
-if missing_columns:
-    st.error(f"❌ Missing columns: {', '.join(missing_columns)}.")
-else:
-    st.dataframe(df[required_columns])
-
-
-    st.markdown("#### 📈 Fit Score Distribution")
-    if 'Fit Score' in df.columns and df['Fit Score'].notna().sum() > 1:
-        fig2, ax2 = plt.subplots()
-        ax2.hist(df['Fit Score'].dropna(), bins=10, edgecolor='black')
-        ax2.set_title("Fit Score Distribution")
-        ax2.set_xlabel("Score")
-        ax2.set_ylabel("Frequency")
-        st.pyplot(fig2)
-    else:
-        st.warning("⚠️ Not enough valid Fit Score data to plot a histogram.")
-
-    st.markdown("---")
-    st.subheader("🧠 Combined Scoring Overview")
-
-required_columns = ['Name', 'BLIX Score', 'Risk Band', 'Fit Score', 'Fit Cluster', 'Priority Score', 'Action']
-missing_columns = [col for col in required_columns if col not in df.columns]
-if missing_columns:
-    st.error(f"❌ Missing columns: {', '.join(missing_columns)}.")
-else:
-    st.dataframe(df[required_columns])
-
+if __name__ == '__main__':
+    main()
