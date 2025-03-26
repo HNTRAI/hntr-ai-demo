@@ -122,12 +122,15 @@ if uploaded_file:
     st.dataframe(df[['Fit Score', 'Fit Cluster']])
 
     st.markdown("#### 📈 Fit Score Distribution")
-    fig2, ax2 = plt.subplots()
-    ax2.hist(df['Fit Score'], bins=10, edgecolor='black')
-    ax2.set_title("Fit Score Distribution")
-    ax2.set_xlabel("Score")
-    ax2.set_ylabel("Frequency")
-    st.pyplot(fig2)
+    if 'Fit Score' in df.columns and df['Fit Score'].notna().sum() > 1:
+        fig2, ax2 = plt.subplots()
+        ax2.hist(df['Fit Score'].dropna(), bins=10, edgecolor='black')
+        ax2.set_title("Fit Score Distribution")
+        ax2.set_xlabel("Score")
+        ax2.set_ylabel("Frequency")
+        st.pyplot(fig2)
+    else:
+        st.warning("⚠️ Not enough valid Fit Score data to plot a histogram.")
 
     st.markdown("---")
     st.subheader("🧠 Combined Scoring Overview")
