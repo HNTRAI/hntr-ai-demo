@@ -57,26 +57,27 @@ if uploaded_file:
     ], axis=1)
 
     model_blix = LogisticRegression()
+    # Only train model if there's enough data
     if features_blix.shape[0] > 1:
         dummy_y = np.random.randint(0, 2, size=features_blix.shape[0])
         model_blix.fit(features_blix, dummy_y)
+        blix_scores = model_blix.predict_proba(features_blix)[:, 1] * 100
+        df['BLIX Score'] = blix_scores
+        df['Risk Band'] = df['BLIX Score'].apply(risk_band)
+    else:
+        st.error("❌ Not enough data rows to train the BLIX model. Please upload a CSV with at least 2 rows.")
+        st.stop()
+    if features_blix.shape[0] > 1:
     else:
         st.error("Not enough data rows to train a dummy BLIX model. Please upload a larger CSV.")
     if features_blix.shape[0] > 1:
-    dummy_y = np.random.randint(0, 2, size=features_blix.shape[0])
-    model_blix.fit(features_blix, dummy_y)
 else:
     st.error("Not enough data rows to train a dummy BLIX model. Please upload a larger CSV.")
 else:
     st.error("Not enough data rows to train a dummy BLIX model. Please upload a larger CSV.")
 else:
     st.error("Not enough data rows to train a dummy BLIX model. Please upload a larger CSV.")
-    blix_scores = model_blix.predict_proba(features_blix)[:, 1] * 100
-    df['BLIX Score'] = blix_scores
-    df['Risk Band'] = df['BLIX Score'].apply(risk_band)
 
-    st.markdown("#### 📊 Risk Bands")
-    st.dataframe(df[['BLIX Score', 'Risk Band']])
 
     st.markdown("#### 📈 BLIX Score Distribution")
     fig, ax = plt.subplots()
@@ -130,4 +131,3 @@ else:
 
     st.markdown("---")
     st.subheader("🧠 Combined Scoring Overview")
-    st.dataframe(df[['BLIX Score', 'Risk Band', 'Fit Score', 'Fit Cluster']])
