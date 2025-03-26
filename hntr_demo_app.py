@@ -14,12 +14,19 @@ import matplotlib.pyplot as plt
 st.set_page_config(page_title="HNTR AI Demo", layout="wide")
 st.title("🔍 HNTR AI – Advisor Intelligence Demo")
 
-st.sidebar.image("https://upload.wikimedia.org/wikipedia/commons/thumb/a/a7/React-icon.svg/512px-React-icon.svg.png", width=100)  # Replace with HNTR AI logo
 st.sidebar.title("HNTR AI")
-st.sidebar.markdown("This app demonstrates the dual scoring engine behind HNTR AI: \n\n- **BLIX™**: Breakaway Likelihood \n- **Fit Score**: Cultural & performance alignment\n\nUpload advisor data to get real-time insights.")
+st.sidebar.markdown(
+    """
+    This app demonstrates the dual scoring engine behind HNTR AI:
+
+    - 🔥 **BLIX™** – Breakaway Likelihood Index  
+    - 🧬 **HNTR Fit** – Cultural & Performance Compatibility
+
+    Upload your advisor dataset to get real-time scores.
+    """)
 
 # Upload data
-uploaded_file = st.file_uploader("📂 Upload Advisor Dataset (CSV)", type="csv", help="Must include columns for both BLIX and Fit models.")
+uploaded_file = st.file_uploader("📂 Upload Advisor Dataset (CSV)", type="csv", help="Include BLIX and Fit-related fields.")
 
 if uploaded_file:
     df = pd.read_csv(uploaded_file)
@@ -57,6 +64,7 @@ if uploaded_file:
     ], axis=1)
 
     model_blix = LogisticRegression()
+
     # Only train model if there's enough data
     if features_blix.shape[0] > 1:
         dummy_y = np.random.randint(0, 2, size=features_blix.shape[0])
@@ -67,17 +75,9 @@ if uploaded_file:
     else:
         st.error("❌ Not enough data rows to train the BLIX model. Please upload a CSV with at least 2 rows.")
         st.stop()
-    if features_blix.shape[0] > 1:
-    else:
-        st.error("Not enough data rows to train a dummy BLIX model. Please upload a larger CSV.")
-    if features_blix.shape[0] > 1:
-else:
-    st.error("Not enough data rows to train a dummy BLIX model. Please upload a larger CSV.")
-else:
-    st.error("Not enough data rows to train a dummy BLIX model. Please upload a larger CSV.")
-else:
-    st.error("Not enough data rows to train a dummy BLIX model. Please upload a larger CSV.")
 
+    st.markdown("#### 📊 Risk Bands")
+    st.dataframe(df[['BLIX Score', 'Risk Band']])
 
     st.markdown("#### 📈 BLIX Score Distribution")
     fig, ax = plt.subplots()
@@ -110,7 +110,7 @@ else:
 
     features_fit = pd.concat([numeric_scaled_fit, cultural_encoded, lifestyle_encoded], axis=1)
 
-    n_clusters = min(5, len(features_fit))  # Prevent requesting more clusters than rows
+    n_clusters = min(5, len(features_fit))
     kmeans = KMeans(n_clusters=n_clusters, random_state=42)
     cluster_labels = kmeans.fit_predict(features_fit)
     df['Fit Cluster'] = cluster_labels
@@ -131,3 +131,4 @@ else:
 
     st.markdown("---")
     st.subheader("🧠 Combined Scoring Overview")
+    st.dataframe(df[['BLIX Score', 'Risk Band', 'Fit Score', 'Fit Cluster']])
