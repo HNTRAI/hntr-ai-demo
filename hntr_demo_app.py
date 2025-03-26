@@ -9,7 +9,6 @@ import matplotlib.pyplot as plt
 # Cache the CSV loading function for performance benefits
 @st.cache_data
 def load_csv_data(file):
-    # Load CSV file and return a cleaned DataFrame
     try:
         df = pd.read_csv(file)
     except Exception as e:
@@ -37,10 +36,9 @@ def validate_data(df, required_columns=["name", "aum", "tenure", "gdc", "fee_bas
     return True
 
 def calculate_blix_score(df):
-    # Calculate the BLIX Score based on provided advisor data
     st.write("Columns in the DataFrame: ", df.columns)  # Debugging the columns
-
-    # Set default values for any missing columns
+    
+    # Check if 'competitor_site_visits' exists in the DataFrame
     if 'competitor_site_visits' not in df.columns:
         st.warning("'competitor_site_visits' column is missing. BLIX score will be calculated without it.")
         df['competitor_site_visits'] = 0  # Default value for missing column
@@ -49,7 +47,6 @@ def calculate_blix_score(df):
         st.warning("'event_attendance' column is missing. BLIX score will be calculated with default values.")
         df['event_attendance'] = 0  # Default value for missing column
 
-    # Calculate the BLIX score
     df['blix_score'] = (
         (df['tenure'] ** 0.5) * 0.2 + 
         np.log(df['aum'] + 1) * 0.3 + 
@@ -61,13 +58,11 @@ def calculate_blix_score(df):
     return df
 
 def calculate_fit_score(df):
-    # Calculate the Fit Score based on advisor attributes
     df['fit_score'] = (df['fee_based'] * 0.7) + (df['commission'] * 0.3)
     df['fit_score'] = df['fit_score'].clip(0, 100)  # Ensure the score is between 0 and 100
     return df
 
 def calculate_priority_score(df, blix_weight=0.4, fit_weight=0.3, gdc_weight=0.2, aum_weight=0.1):
-    # Calculate the Priority Score for intervention, based on multiple factors
     df['priority_score'] = (
         (df['blix_score'] * blix_weight) + 
         (df['fit_score'] * fit_weight) + 
@@ -77,16 +72,22 @@ def calculate_priority_score(df, blix_weight=0.4, fit_weight=0.3, gdc_weight=0.2
     return df
 
 def clustering(df):
-    # Apply KMeans clustering to group advisors by Fit and BLIX scores
     kmeans = KMeans(n_clusters=3, random_state=42)
     df['Cluster'] = kmeans.fit_predict(df[['blix_score', 'fit_score']])
     return df, kmeans
 
 def display_reports(df):
-    # Display processed advisor data and further analyses
     st.write("### Processed Advisor Data")
     st.dataframe(df)
+
+    # Ensure 'name', 'blix_score', 'fit_score', 'priority_score', and 'cluster' exist
+    required_columns = ['name', 'blix_score', 'fit_score', 'priority_score', 'cluster']
+    missing_columns = [col for col in required_columns if col not in df.columns]
     
+    if missing_columns:
+        st.error(f"Missing columns for display: {', '.join(missing_columns)}")
+        return
+
     # BLIX vs Fit scatter plot
     st.write("### BLIX Score vs. Fit Score")
     fig, ax = plt.subplots()
@@ -95,7 +96,6 @@ def display_reports(df):
     ax.set_ylabel('Fit Score')
     st.pyplot(fig)
 
-    # Display priority scores and intervention actions
     st.write("### Advisor Intervention Priority")
     df_sorted = df.sort_values(by='priority_score', ascending=False)
     st.dataframe(df_sorted[['name', 'blix_score', 'fit_score', 'priority_score', 'cluster']])
