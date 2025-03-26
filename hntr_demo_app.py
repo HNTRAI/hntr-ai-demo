@@ -59,8 +59,11 @@ if uploaded_file:
     model_blix = LogisticRegression()
     if features_blix.shape[0] > 1:
     if features_blix.shape[0] > 1:
+    if features_blix.shape[0] > 1:
     dummy_y = np.random.randint(0, 2, size=features_blix.shape[0])
     model_blix.fit(features_blix, dummy_y)
+else:
+    st.error("Not enough data rows to train a dummy BLIX model. Please upload a larger CSV.")
 else:
     st.error("Not enough data rows to train a dummy BLIX model. Please upload a larger CSV.")
 else:
