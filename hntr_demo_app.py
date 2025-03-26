@@ -33,7 +33,13 @@ def validate_data(df, required_columns=["name", "aum", "tenure", "gdc"]):
 
 def calculate_blix_score(df):
     # Calculate the BLIX Score based on provided advisor data
-    df['blix_score'] = (df['tenure'] * 0.3) + (df['aum'] * 0.3) + (df['gdc'] * 0.4)
+    df['blix_score'] = (
+        (df['tenure'] ** 0.5) * 0.2 +  # Diminishing returns on tenure
+        np.log(df['aum'] + 1) * 0.3 +  # Log scale for AUM
+        (df['gdc'] / df['gdc'].max()) * 0.3 +  # Normalize GDC between 0-1
+        (df['competitor_site_visits'] * 0.1) +  # Risk from competitor visits
+        (df['event_attendance'] * 0.1)  # Less attendance = higher risk
+    )
     df['blix_score'] = df['blix_score'].clip(0, 100)  # Ensure the score is between 0 and 100
     return df
 
