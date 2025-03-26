@@ -41,6 +41,7 @@ def ensure_columns(df):
     
     Required: 'AUM', 'GDC'
     Optional: 'competitor_site_visits', 'event_attendance'
+    Additionally, if a 'name' column is missing, create one with default values.
     """
     required_columns = ['AUM', 'GDC']
     optional_columns = {'competitor_site_visits': 0, 'event_attendance': 0}
@@ -55,6 +56,11 @@ def ensure_columns(df):
     for col, default in optional_columns.items():
         if col not in df.columns:
             df[col] = default
+            
+    # Add a default name column if not present
+    if 'name' not in df.columns:
+        df['name'] = "Advisor " + (df.index + 1).astype(str)
+        
     return df
 
 # =============================================================================
@@ -67,11 +73,9 @@ def calculate_blix_score(df):
     Normalize each field (GDC, AUM, competitor_site_visits, event_attendance)
     and combine them with sample weights.
     """
-    # Ensure missing values are handled
     df['competitor_site_visits'] = df['competitor_site_visits'].fillna(0)
     df['event_attendance'] = df['event_attendance'].fillna(0)
     
-    # Normalize values (add a small constant to avoid division by zero)
     max_gdc = df['GDC'].max() or 1
     max_aum = df['AUM'].max() or 1
     max_comp = df['competitor_site_visits'].max() or 1
@@ -110,7 +114,6 @@ def perform_clustering(df, n_clusters=3):
     Perform KMeans clustering on the BLIX and Fit Scores.
     The cluster label is added as a new column 'Cluster'.
     """
-    # Recompute the dynamic scores (if needed)
     df = calculate_blix_score(df)
     df = calculate_fit_score(df)
     
@@ -126,8 +129,8 @@ def perform_clustering(df, n_clusters=3):
 def compute_retention_priority(df):
     """
     Compute a Retention Priority Score for advisors based on:
-      - BLIX Score (likelihood to leave, 0-100)
-      - Fit Score (alignment with firm, 0-100)
+      - BLIX Score (0-100)
+      - Fit Score (0-100)
       - GDC and AUM as additional factors
 
     Steps:
@@ -163,7 +166,7 @@ def process_data(file):
     """
     Process the uploaded CSV data:
       - Read CSV
-      - Ensure required and optional columns
+      - Ensure required and optional columns (including a name column)
       - Calculate dynamic score columns (BLIX, Fit, Priority)
       - Apply clustering
       - Compute Retention Priority for retention triage
@@ -189,6 +192,7 @@ It generates:
 - **BLIX Report:** Sorted by BLIX Score (highest likelihood to leave).
 - **Fit Report:** Sorted by Fit Score (lowest fit first).
 - **Retention Triage Report:** A combined report using a Retention Priority Score that accounts for high BLIX and high Fit, along with normalized GDC and AUM.
+All reports include the advisor's name.
 """)
 
 uploaded_file = st.file_uploader("Upload CSV file", type=["csv"])
@@ -201,17 +205,17 @@ if uploaded_file is not None:
     # --- BLIX Report: Sorted by BLIX Score (descending) ---
     df_blix = df_processed.sort_values(by='BLIX Score', ascending=False)
     st.subheader("BLIX Report")
-    st.dataframe(df_blix[['AUM', 'GDC', 'BLIX Score', 'Cluster']])
+    st.dataframe(df_blix[['name', 'AUM', 'GDC', 'BLIX Score', 'Cluster']])
     
     # --- Fit Report: Sorted by Fit Score (ascending) ---
     df_fit = df_processed.sort_values(by='Fit Score', ascending=True)
     st.subheader("Fit Report")
-    st.dataframe(df_fit[['AUM', 'GDC', 'Fit Score', 'Cluster']])
+    st.dataframe(df_fit[['name', 'AUM', 'GDC', 'Fit Score', 'Cluster']])
     
     # --- Retention Triage Report ---
     df_retention = df_processed.sort_values(by='Retention Priority', ascending=False)
     st.subheader("Retention Triage Report")
-    st.dataframe(df_retention[['AUM', 'GDC', 'BLIX Score', 'Fit Score', 'GDC_norm', 'AUM_norm', 'Retention Priority']])
+    st.dataframe(df_retention[['name', 'AUM', 'GDC', 'BLIX Score', 'Fit Score', 'GDC_norm', 'AUM_norm', 'Retention Priority']])
     
     # --- Additional Plot ---
     if st.checkbox("Show BLIX Score Distribution Plot"):
