@@ -30,7 +30,6 @@ uploaded_file = st.file_uploader("📂 Upload Advisor Dataset (CSV)", type="csv"
 
 if uploaded_file:
     df = pd.read_csv(uploaded_file)
-    original_names = df[['Name']].copy() if 'Name' in df.columns else None
     st.subheader("🗂 Uploaded Data Preview")
     st.dataframe(df.head())
 
@@ -78,9 +77,14 @@ if uploaded_file:
         st.stop()
 
     st.markdown("#### 📊 Risk Bands")
-    if original_names is not None:
-        df['Name'] = original_names
-    st.dataframe(df[['Name', 'BLIX Score', 'Risk Band']])
+
+required_columns = ['Name', 'BLIX Score', 'Risk Band']
+missing_columns = [col for col in required_columns if col not in df.columns]
+if missing_columns:
+    st.error(f"❌ Missing columns: {', '.join(missing_columns)}.")
+else:
+    st.dataframe(df[required_columns])
+
 
     st.markdown("#### 📈 BLIX Score Distribution")
     fig, ax = plt.subplots()
@@ -122,9 +126,14 @@ if uploaded_file:
     fit_scores = similarities.max(axis=1) * 100
     df['Fit Score'] = fit_scores
 
-    if original_names is not None:
-        df['Name'] = original_names
-    st.dataframe(df[['Name', 'Fit Score', 'Fit Cluster']])
+
+required_columns = ['Name', 'Fit Score', 'Fit Cluster']
+missing_columns = [col for col in required_columns if col not in df.columns]
+if missing_columns:
+    st.error(f"❌ Missing columns: {', '.join(missing_columns)}.")
+else:
+    st.dataframe(df[required_columns])
+
 
     st.markdown("#### 📈 Fit Score Distribution")
     if 'Fit Score' in df.columns and df['Fit Score'].notna().sum() > 1:
@@ -139,6 +148,11 @@ if uploaded_file:
 
     st.markdown("---")
     st.subheader("🧠 Combined Scoring Overview")
-    if original_names is not None:
-        df['Name'] = original_names
-    st.dataframe(df[['Name', 'BLIX Score', 'Risk Band', 'Fit Score', 'Fit Cluster', 'Priority Score', 'Action']])
+
+required_columns = ['Name', 'BLIX Score', 'Risk Band', 'Fit Score', 'Fit Cluster', 'Priority Score', 'Action']
+missing_columns = [col for col in required_columns if col not in df.columns]
+if missing_columns:
+    st.error(f"❌ Missing columns: {', '.join(missing_columns)}.")
+else:
+    st.dataframe(df[required_columns])
+
