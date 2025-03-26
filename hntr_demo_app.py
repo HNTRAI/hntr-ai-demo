@@ -31,7 +31,7 @@ uploaded_file = st.file_uploader("📂 Upload Advisor Dataset (CSV)", type="csv"
 if uploaded_file:
     df = pd.read_csv(uploaded_file)
 
-# Ensure the 'Name' column exists right after loading the CSV
+# Ensure the 'Name' column exists after loading the CSV
 if 'Name' not in df.columns:
     st.error("❌ Missing 'Name' column in uploaded data. Please upload a file with this column.")
     st.stop()  # Stops further execution
