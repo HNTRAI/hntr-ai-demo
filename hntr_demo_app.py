@@ -30,6 +30,7 @@ uploaded_file = st.file_uploader("📂 Upload Advisor Dataset (CSV)", type="csv"
 
 if uploaded_file:
     df = pd.read_csv(uploaded_file)
+    original_names = df[['Name']].copy() if 'Name' in df.columns else None
     st.subheader("🗂 Uploaded Data Preview")
     st.dataframe(df.head())
 
@@ -77,7 +78,9 @@ if uploaded_file:
         st.stop()
 
     st.markdown("#### 📊 Risk Bands")
-    st.dataframe(df[['BLIX Score', 'Risk Band']])
+    if original_names is not None:
+        df['Name'] = original_names
+    st.dataframe(df[['Name', 'BLIX Score', 'Risk Band']])
 
     st.markdown("#### 📈 BLIX Score Distribution")
     fig, ax = plt.subplots()
@@ -119,7 +122,9 @@ if uploaded_file:
     fit_scores = similarities.max(axis=1) * 100
     df['Fit Score'] = fit_scores
 
-    st.dataframe(df[['Fit Score', 'Fit Cluster']])
+    if original_names is not None:
+        df['Name'] = original_names
+    st.dataframe(df[['Name', 'Fit Score', 'Fit Cluster']])
 
     st.markdown("#### 📈 Fit Score Distribution")
     if 'Fit Score' in df.columns and df['Fit Score'].notna().sum() > 1:
@@ -134,4 +139,6 @@ if uploaded_file:
 
     st.markdown("---")
     st.subheader("🧠 Combined Scoring Overview")
-    st.dataframe(df[['BLIX Score', 'Risk Band', 'Fit Score', 'Fit Cluster']])
+    if original_names is not None:
+        df['Name'] = original_names
+    st.dataframe(df[['Name', 'BLIX Score', 'Risk Band', 'Fit Score', 'Fit Cluster', 'Priority Score', 'Action']])
