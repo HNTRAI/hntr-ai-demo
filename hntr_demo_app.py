@@ -33,13 +33,26 @@ def validate_data(df, required_columns=["name", "aum", "tenure", "gdc"]):
 
 def calculate_blix_score(df):
     # Calculate the BLIX Score based on provided advisor data
-    df['blix_score'] = (
-        (df['tenure'] ** 0.5) * 0.2 +  # Diminishing returns on tenure
-        np.log(df['aum'] + 1) * 0.3 +  # Log scale for AUM
-        (df['gdc'] / df['gdc'].max()) * 0.3 +  # Normalize GDC between 0-1
-        (df['competitor_site_visits'] * 0.1) +  # Risk from competitor visits
-        (df['event_attendance'] * 0.1)  # Less attendance = higher risk
-    )
+    st.write("Columns in the DataFrame: ", df.columns)  # Debugging the columns
+    
+    # Check if 'competitor_site_visits' exists in the DataFrame
+    if 'competitor_site_visits' not in df.columns:
+        st.warning("'competitor_site_visits' column is missing. BLIX score will be calculated without it.")
+        df['blix_score'] = (
+            (df['tenure'] ** 0.5) * 0.2 + 
+            np.log(df['aum'] + 1) * 0.3 + 
+            (df['gdc'] / df['gdc'].max()) * 0.3
+        )
+    else:
+        # Calculate BLIX score with competitor site visits
+        df['blix_score'] = (
+            (df['tenure'] ** 0.5) * 0.2 + 
+            np.log(df['aum'] + 1) * 0.3 + 
+            (df['gdc'] / df['gdc'].max()) * 0.3 + 
+            (df['competitor_site_visits'] * 0.1) + 
+            (df['event_attendance'] * 0.1)
+        )
+    
     df['blix_score'] = df['blix_score'].clip(0, 100)  # Ensure the score is between 0 and 100
     return df
 
