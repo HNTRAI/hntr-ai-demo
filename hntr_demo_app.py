@@ -72,6 +72,7 @@ def calculate_priority_score(df, blix_weight=0.4, fit_weight=0.3, gdc_weight=0.2
     return df
 
 def clustering(df):
+    # Apply KMeans clustering to group advisors by Fit and BLIX scores
     kmeans = KMeans(n_clusters=3, random_state=42)
     df['Cluster'] = kmeans.fit_predict(df[['blix_score', 'fit_score']])
     return df, kmeans
